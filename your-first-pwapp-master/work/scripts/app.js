@@ -11,6 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+/*
+ * Run everything Here First
+ */
 (function () {
     'use strict';
     var app = {
@@ -85,10 +88,12 @@
         var wind = data.channel.wind;
         var card = app.visibleCards[data.key];
         if (!card) {
+            // make a copy of the cardtemplate, clean it up, unhide it and display it
             card = app.cardTemplate.cloneNode(true);
             card.classList.remove('cardTemplate');
             card.querySelector('.location').textContent = data.label;
             card.removeAttribute('hidden');
+            // put the new card into the .main
             app.container.appendChild(card);
             app.visibleCards[data.key] = card;
         }
@@ -104,6 +109,7 @@
                 return;
             }
         }
+        // bind the data to the elements on the card
         cardLastUpdatedElem.textContent = data.created;
         card.querySelector('.description').textContent = current.text;
         card.querySelector('.date').textContent = current.date;
@@ -149,7 +155,6 @@
     app.getForecast = function (key, label) {
         var statement = 'select * from weather.forecast where woeid=' + key;
         var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + statement;
-        
         // make two asynchronous requests for data. one from cache
         // TODO add cache logic here
         if ('caches' in window) {   
@@ -160,17 +165,25 @@
              */
                
             caches.match(url).then(function (response) {    
+                console.log('[app] cache has recent data request');
                 if (response) {     
-                    response.json().then(function updateFromCache(json) {      
-                        var results = json.query.results;      
-                        results.key = key;      
-                        results.label = label;      
-                        results.created = json.query.created;      
-                        app.updateForecastCard(results);     
+                    response.json().then(function updateFromCache(json) {  
+                        var results = json.query.results;   
+                        // sometimes results is null and cause js errors
+                        if (results) {
+                            console.log('[app] cache - results FOUND');
+                            results.key = key;      
+                            results.label = label;      
+                            results.created = json.query.created;      
+                            app.updateForecastCard(results); 
+                        }    
+                        else {
+                            console.log('[app] cache - results NOT FOUND');
+                        }
                     });    
                 }   
             });  
-        }
+        };
         // and one from the XHR
         // Fetch the latest data.
         var request = new XMLHttpRequest();
@@ -179,10 +192,16 @@
                 if (request.status === 200) {
                     var response = JSON.parse(request.response);
                     var results = response.query.results;
-                    results.key = key;
-                    results.label = label;
-                    results.created = response.query.created;
-                    app.updateForecastCard(results);
+                    if (results) {
+                        console.log('[app] XHR - results FOUND');
+                        results.key = key;
+                        results.label = label;
+                        results.created = response.query.created;
+                        app.updateForecastCard(results);
+                    }
+                    else {
+                        console.log('[app] XHR - results NOT FOUND');
+                    }
                 }
             }
             else {
@@ -203,7 +222,11 @@
     // Save list of cities to localStorage.
     app.saveSelectedCities = function () {
         var selectedCities = JSON.stringify(app.selectedCities);
+        
+        console.log('[app] saving selectedCities to localStorage');
+        // todo: replace localStorage with 
         localStorage.selectedCities = selectedCities;
+        // keyValStore.set('selectedCities', selectedCities);
     };
     app.getIconClass = function (weatherCode) {
         // Weather codes: https://developer.yahoo.com/weather/documentation.html#codes
@@ -274,9 +297,9 @@
      * discussion.
      */
     var initialWeatherForecast = {
-        key: '2357536', //'2459115',
-        label: 'Austin, TX', //'New York, NY',
-        created: '2016-07-22T01:00:00Z'
+        key: '12779359', //'2459115',
+        label: 'Holton, Mi', //'New York, NY',
+        created: '1969-05-25T01:00:00Z'
         , channel: {
             units: {
                 distance: "mi"
@@ -284,16 +307,16 @@
                 , speed: "mph"
                 , temperature: "F"
             }
-            , title: "Yahoo! Weather - Austin, TX, US"
-            , link: "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2357536/"
-            , description: "Yahoo! Weather for Austin, TX, US"
+            , title: "Yahoo! Weather - Holton, Mi, US"
+            , link: "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-12779359/"
+            , description: "Yahoo! Weather for Holton, Mi, US"
             , language: "en-us"
             , lastBuildDate: "Fri, 00 May 2017 09:53 AM CDT"
             , ttl: "60"
             , location: {
-                city: "Austin"
+                city: "Holton"
                 , country: "United States"
-                , region: " TX"
+                , region: " MI"
             }
             , wind: {
                 "chill": "63"
@@ -310,18 +333,11 @@
                 "sunrise": "6:44 am"
                 , "sunset": "8:11 pm"
             }
-            , image: {
-                "title": "Yahoo! Weather"
-                , "width": "142"
-                , "height": "18"
-                , "link": "http://weather.yahoo.com"
-                , "url": "http://l.yimg.com/a/i/brand/purplelogo//uh/us/news-wea.gif"
-            }
             , item: {
-                title: "Conditions for Austin, TX, US at 09:00 AM CDT"
+                title: "Conditions for Holton, Mi, US at 09:00 AM CDT"
                 , lat: "30.30637"
                 , long: "-97.752762"
-                , link: "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-2357536/"
+                , link: "http://us.rd.yahoo.com/dailynews/rss/weather/Country__Country/*https://weather.yahoo.com/country/state/city-12779359/"
                 , pubDate: "Fri, 05 May 2017 09:00 AM CDT"
                 , condition: {
                     code: "32"
@@ -414,7 +430,8 @@
             , }
         }
     };
-    // TODO uncomment line below to test app with fake data
+    // Call to update the current card with either the fake data or
+    // 
     app.updateForecastCard(initialWeatherForecast);
     // TODO add startup code here
     /************************************************************************
@@ -427,28 +444,34 @@
      *   Instead, check out IDB (https://www.npmjs.com/package/idb) or
      *   SimpleDB (https://gist.github.com/inexorabletash/c8069c042b734519680c)
      ************************************************************************/
+    console.log('[app] retrieving selectedCities from localStorage');
     app.selectedCities = localStorage.selectedCities;
     if (app.selectedCities) {
+        console.log('[app] localStorage.selectedCities has values');
         app.selectedCities = JSON.parse(app.selectedCities);
         app.selectedCities.forEach(function (city) {
+            console.log('[app] getForcast(' + city.key +', ' + city.label + ') called.');
             app.getForecast(city.key, city.label);
         });
     }
     else {
+        console.log('[app] localStorage.selectedCities has no values');
         /* The user is using the app for the first time, or the user has not
          * saved any cities, so show the user some fake data. A real app in this
          * scenario could guess the user's location via IP lookup and then inject
          * that data into the page.
          */
+        // assume the default city card
         app.updateForecastCard(initialWeatherForecast);
-        app.selectedCities = [{
-            key: initialWeatherForecast.key
-            , label: initialWeatherForecast.label
-            }];
+        // add the default to selected cities
+        app.selectedCities = [{key: initialWeatherForecast.key, label: initialWeatherForecast.label}];
         app.saveSelectedCities();
     };
+    // this places the service worker code into the browser's Application
+    // (if('serviceWorker' in navigator)) is a check to see if the browser supports it
     // TODO add service worker code here
     if ('serviceWorker' in navigator) {  
+        // when registered, an 'install' event triggers.
         navigator.serviceWorker.register('./service-worker.js').then(function () {
             console.log('Service Worker Registered');
         }); 
